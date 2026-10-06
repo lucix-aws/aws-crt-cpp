@@ -257,3 +257,52 @@ static int s_CborLastErrorTest(struct aws_allocator *allocator, void *ctx)
 }
 
 AWS_TEST_CASE(CborLastErrorTest, s_CborLastErrorTest)
+
+static int s_CborBigIntegerTest(struct aws_allocator *allocator, void *ctx)
+{
+    (void)ctx;
+    {
+        ApiHandle apiHandle(allocator);
+
+        const char *inputs[] = {
+            "0",
+            "42",
+            "-1",
+            "18446744073709551615",  /* 2^64 - 1, largest plain UInt */
+            "18446744073709551616",  /* 2^64, smallest positive bignum */
+            "-18446744073709551616", /* -2^64, largest plain NegInt */
+            "-18446744073709551617", /* -2^64 - 1, smallest negative bignum */
+            "123456789012345678901234567890123456789012345678901234567890",
+        };
+
+        Cbor::CborEncoder encoder(allocator);
+        for (const char *input : inputs)
+        {
+            encoder.WriteBigInteger(BigInteger::FromString(aws_byte_cursor_from_c_str(input), allocator).value());
+        }
+
+        Cbor::CborDecoder decoder(encoder.GetEncodedData(), allocator);
+        for (const char *input : inputs)
+        {
+            auto value = decoder.PopNextBigIntegerVal();
+            ASSERT_TRUE(value.has_value());
+            ASSERT_TRUE(value->ToString() == input);
+        }
+        ASSERT_UINT_EQUALS(0, decoder.GetRemainingLength());
+
+        /* Only values outside the 64-bit range use a tag. */
+        Cbor::CborEncoder tagEncoder(allocator);
+        tagEncoder.WriteBigInteger(BigInteger::FromString(aws_byte_cursor_from_c_str("42"), allocator).value());
+        tagEncoder.WriteBigInteger(
+            BigInteger::FromString(aws_byte_cursor_from_c_str("18446744073709551616"), allocator).value());
+        Cbor::CborDecoder tagDecoder(tagEncoder.GetEncodedData(), allocator);
+        ASSERT_TRUE(tagDecoder.PeekType().value() == Cbor::CborType::UInt);
+        ASSERT_TRUE(tagDecoder.PopNextBigIntegerVal().has_value());
+        ASSERT_TRUE(tagDecoder.PeekType().value() == Cbor::CborType::Tag);
+        ASSERT_UINT_EQUALS(AWS_CBOR_TAG_UNSIGNED_BIGNUM, tagDecoder.PopNextTagVal().value());
+    }
+
+    return AWS_OP_SUCCESS;
+}
+
+AWS_TEST_CASE(CborBigIntegerTest, s_CborBigIntegerTest)

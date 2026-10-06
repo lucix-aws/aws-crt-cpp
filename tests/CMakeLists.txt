@@ -364,6 +364,11 @@ endif()
 add_test_case(CborSanityTest)
 add_test_case(CborTimeStampTest)
 add_test_case(CborLastErrorTest)
+add_test_case(CborBigIntegerTest)
+
+add_test_case(BigIntegerRoundTripTest)
+add_test_case(BigIntegerInvalidInputTest)
+add_test_case(BigIntegerEqualityTest)
 
 if (NOT BYO_CRYPTO) 
     add_test_case(HKDFPiping)

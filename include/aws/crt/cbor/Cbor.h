@@ -6,6 +6,7 @@
 
 #include <aws/common/cbor.h>
 
+#include <aws/crt/BigInteger.h>
 #include <aws/crt/Types.h>
 
 namespace Aws
@@ -153,6 +154,15 @@ namespace Aws
                  * @param tag_number The tag value to encode.
                  */
                 void WriteTag(uint64_t tag_number) noexcept;
+
+                /**
+                 * Encode an arbitrary-precision integer. Values in [-2^64, 2^64 - 1] are encoded as UInt or NegInt,
+                 * anything else as a bignum (tag 2 or 3, RFC8949 section 3.4.3). See
+                 * aws_cbor_encoder_write_big_integer().
+                 *
+                 * @param value value to encode.
+                 */
+                void WriteBigInteger(const BigInteger &value) noexcept;
 
                 /**
                  * Encode a simple value Null
@@ -350,6 +360,17 @@ namespace Aws
                  *          used to retrieve CRT error code.
                  */
                 Optional<uint64_t> PopNextTagVal() noexcept;
+
+                /**
+                 * Get the next data item as an arbitrary-precision integer. Accepts UInt, NegInt, and bignums (tag 2
+                 * or 3). On failure the decoder is left where it was, except for a malformed data item. See
+                 * aws_cbor_decoder_pop_next_big_integer_val().
+                 *
+                 * @return If successful, return the value
+                 *         If not, return will be none and LastError() can be
+                 *          used to retrieve CRT error code.
+                 */
+                Optional<BigInteger> PopNextBigIntegerVal() noexcept;
 
                 /**
                  * @return the value of the last aws error encountered by operations on this instance.
